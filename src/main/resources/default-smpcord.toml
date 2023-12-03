@@ -1,0 +1,18 @@
+# Bot token
+token = ""
+
+# Channel ID
+channel = ""
+
+# Webhook name
+webhook-name = "SMPCord"
+
+# Avatar API url
+# Used by messages sent by in-game players
+# Placeholder: {{uuid}}: User UUID
+avatar-api-url = "https://mc-heads.net/head/{{uuid}}"
+
+# Avatar API url
+# Used by login, logout and other similar events
+# Placeholder: {{uuid}}: User UUID
+avatar-thumbnail-api-url = "https://mc-heads.net/avatar/{{uuid}}/16"
