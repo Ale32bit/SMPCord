@@ -7,6 +7,12 @@ channel = ""
 # Webhook name
 webhook-name = "SMPCord"
 
+# Mod logs webhook URL
+mod-webhook-url = ""
+
+# Role ID to give to new members that use /link
+role-id = ""
+
 # Avatar API url
 # Used by messages sent by in-game players
 # Placeholder: {{uuid}}: User UUID

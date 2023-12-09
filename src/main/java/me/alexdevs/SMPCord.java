@@ -2,10 +2,13 @@ package me.alexdevs;
 
 import club.minnced.discord.webhook.external.JDAWebhookClient;
 import club.minnced.discord.webhook.send.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
+import com.velocitypowered.api.event.connection.LoginEvent;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
@@ -15,25 +18,35 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import me.alexdevs.Discord.Bot;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
-import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.slf4j.Logger;
-
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.UUID;
 
 @Plugin(id = "smpcord",
     name = "SMPCord", version = "0.1.0-SNAPSHOT", url = "https://alexdevs.me",
-    authors = {"AlexDevs"}, description = "Discord bridge for Devs.SMP();")
+    authors = {"AlexDevs"}, description = "Whitelist manager for Devs.SMP();")
 public class SMPCord {
     private final ProxyServer proxy;
     private final Logger logger;
     private final Path dataDirectory;
     private SMPCordConfig config;
     private Bot discordBot;
+
+    private WhitelistConfig whitelistConfig;
+    private Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private final HashMap<UUID, String> whitelistCodes = new HashMap<>();
+
+    public final HashMap<UUID, String> usernamesCache = new HashMap<>();
 
     @Inject
     public SMPCord(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) {
@@ -51,6 +64,8 @@ public class SMPCord {
 
         Path configPath = dataDirectory.resolve("SMPCord.toml");
         config = SMPCordConfig.read(configPath);
+
+        loadList();
 
         try {
             discordBot = new Bot(this);
@@ -72,6 +87,49 @@ public class SMPCord {
         load();
     }
 
+    public void loadList() {
+        var dir = dataDirectory.toFile();
+        var whitelistConfigPath = Path.of(dir.getAbsolutePath(), "players.json");
+        var whitelistConfig = whitelistConfigPath.toFile();
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
+
+        if (!whitelistConfig.exists()) {
+            saveList();
+        }
+
+        try {
+            var reader = new FileReader(whitelistConfigPath.toString());
+
+            this.whitelistConfig = gson.fromJson(reader, WhitelistConfig.class);
+
+            reader.close();
+        } catch (IOException e) {
+            logger.error("Could not read from file: " + e.getMessage());
+        }
+    }
+
+    public void saveList() {
+        var dir = dataDirectory.toFile();
+        var whitelistConfigPath = Path.of(dir.getAbsolutePath(), "players.json");
+        if (!dir.exists()) {
+            dir.mkdir();
+        }
+
+        try {
+            var writer = new FileWriter(whitelistConfigPath.toString());
+
+            if (whitelistConfig == null)
+                whitelistConfig = new WhitelistConfig();
+
+            writer.write(gson.toJson(whitelistConfig));
+            writer.close();
+        } catch (IOException e) {
+            logger.error("Could not write to file: " + e.getMessage());
+        }
+    }
+
     public SMPCordConfig getConfig() {
         return config;
     }
@@ -84,7 +142,59 @@ public class SMPCord {
         return logger;
     }
 
+    public HashMap<UUID, String> getWhitelistCodes() {
+        return whitelistCodes;
+    }
+
+    public WhitelistConfig getWhitelistConfig() {
+        return whitelistConfig;
+    }
+
     public class SMPCordListener {
+        @Subscribe
+        private void onLogin(LoginEvent event) {
+            var player = event.getPlayer();
+            var uuid = player.getUniqueId();
+
+            var whitelist = whitelistConfig.getWhitelist();
+
+            // player is whitelisted
+            if (whitelist.containsKey(uuid))
+                return;
+
+            String code;
+            if (!whitelistCodes.containsKey(uuid)) {
+                do {
+                    code = Utils.generateRandomCode();
+                } while (whitelistCodes.containsValue(code));
+                whitelistCodes.put(uuid, code);
+            } else {
+                code = whitelistCodes.get(uuid);
+            }
+
+            usernamesCache.put(uuid, player.getUsername());
+
+            var command = String.format("/link %s", code);
+
+            var text = Component.empty()
+                .append(Component
+                    .text("You are not whitelisted!")
+                    .color(NamedTextColor.GOLD))
+                .appendNewline()
+                .append(Component
+                    .text("Run the following command on Discord to join:"))
+                .appendNewline()
+                .append(Component
+                    .text(command)
+                    .color(NamedTextColor.GREEN)
+                    .decorate(TextDecoration.UNDERLINED)
+                    .clickEvent(ClickEvent.copyToClipboard(command))
+                    .hoverEvent(HoverEvent.showText(Component.text("Click to copy"))));
+
+            player.disconnect(text);
+        }
+
+
         @Subscribe(order = PostOrder.LATE)
         private void onPostLogin(PostLoginEvent event) {
             var player = event.getPlayer();
@@ -135,6 +245,7 @@ public class SMPCord {
 
             sendWebhook(webhookMessage);
         }
+
         public void sendWebhook(WebhookMessage message) {
             var webhook = discordBot.getWebhook();
             try (var client = JDAWebhookClient.from(webhook)) {

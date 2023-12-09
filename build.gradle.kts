@@ -31,6 +31,7 @@ dependencies {
 
 }
 
+
 tasks {
     named<ShadowJar>("shadowJar") {
         //archiveClassifier.set(null)

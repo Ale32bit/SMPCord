@@ -12,15 +12,20 @@ public class SMPCordConfig {
     private String channel;
     @Expose
     private String webhookName;
+    private String modWebhookUrl;
+    @Expose
+    private String roleId;
     @Expose
     private String avatarApiUrl;
     @Expose
     private String avatarThumbnailApiUrl;
 
-    public SMPCordConfig(String token, String channel, String webhookName, String avatarApiUrl, String avatarThumbnailApiUrl) {
+    public SMPCordConfig(String token, String channel, String webhookName, String modWebhookUrl, String roleId, String avatarApiUrl, String avatarThumbnailApiUrl) {
         this.token = token;
         this.channel = channel;
         this.webhookName = webhookName;
+        this.modWebhookUrl = modWebhookUrl;
+        this.roleId = roleId;
         this.avatarApiUrl = avatarApiUrl;
         this.avatarThumbnailApiUrl = avatarThumbnailApiUrl;
     }
@@ -44,10 +49,12 @@ public class SMPCordConfig {
         var token = config.getOrElse("token", "");
         var channel = config.getOrElse("channel", "");
         var webhookName = config.getOrElse("webhook-name", "SMPCord");
+        var modWebhookUrl = config.getOrElse("mod-webhook-url", "");
+        var roleId = config.getOrElse("role-id", "");
         var avatarApiUrl = config.getOrElse("avatar-api-url", "https://mc-heads.net/head/{{uuid}}");
-        var avatarThumbnailApiUrl = config.getOrElse("avatar-thumbnail-api-url", "https://mc-heads.net/avatar/{{uuid}}/16");
+        var avatarThumbnailApiUrl = config.getOrElse("avatar-thumbnail-api-url", "https://mc-heads.net/head/{{uuid}}/16");
 
-        return new SMPCordConfig(token, channel, webhookName, avatarApiUrl, avatarThumbnailApiUrl);
+        return new SMPCordConfig(token, channel, webhookName, modWebhookUrl, roleId, avatarApiUrl, avatarThumbnailApiUrl);
     }
 
     public String getToken() {
@@ -60,6 +67,14 @@ public class SMPCordConfig {
 
     public String getWebhookName() {
         return webhookName;
+    }
+
+    public String getModWebhookUrl() {
+        return modWebhookUrl;
+    }
+
+    public String getRoleId() {
+        return roleId;
     }
 
     public String getAvatarApiUrl() {
