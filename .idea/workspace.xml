@@ -4,16 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="46103109-3888-467a-bf9d-b15d7471f155" name="Changes" comment="Initial commitInitial commitInitial commitInitial commit">
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/PlayerBanInfo.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/Utils.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/WhitelistConfig.java" afterDir="false" />
+    <list default="true" id="46103109-3888-467a-bf9d-b15d7471f155" name="Changes" comment="Add whitelist functionality">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/me/alexdevs/Discord/Bot.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/Discord/Bot.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/me/alexdevs/PlayerBanInfo.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/me/alexdevs/SMPCord.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/SMPCord.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/me/alexdevs/SMPCordConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/me/alexdevs/SMPCordConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/default-smpcord.toml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/default-smpcord.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,17 +57,21 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;Gradle.Build.executor&quot;: &quot;Run&quot;,
+    &quot;Gradle.Run Velocity.executor&quot;: &quot;Debug&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/Alex/IdeaProjects/SMPCord/run/plugins&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;onboarding.tips.debug.path&quot;: &quot;C:/Users/Alex/IdeaProjects/SMPCord/src/main/java/me/alexdevs/Main.java&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
@@ -81,7 +81,7 @@
       <recent name="C:\Users\Alex\IdeaProjects\SMPCord\run\plugins" />
     </key>
   </component>
-  <component name="RunManager" selected="Gradle.Build">
+  <component name="RunManager" selected="Gradle.Run Velocity">
     <configuration name="Build" type="GradleRunConfiguration" factoryName="Gradle">
       <ExternalSystemSettings>
         <option name="executionName" />
@@ -131,6 +131,13 @@
       <item itemvalue="Gradle.Build" />
     </list>
   </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="jdk-17.0.9-corretto-17.0.9-3183f394aec4-8f899f12" />
+      </set>
+    </attachedChunks>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -147,6 +154,11 @@
       <workItem from="1702049610400" duration="7307000" />
       <workItem from="1702113280704" duration="5000" />
       <workItem from="1702113296362" duration="2692000" />
+      <workItem from="1702126785961" duration="641000" />
+      <workItem from="1702199643970" duration="1612000" />
+      <workItem from="1702213656445" duration="1062000" />
+      <workItem from="1702215842655" duration="1324000" />
+      <workItem from="1702491370375" duration="5685000" />
     </task>
     <task id="LOCAL-00001" summary="Initial commit">
       <option name="closed" value="true" />
@@ -156,7 +168,15 @@
       <option name="project" value="LOCAL" />
       <updated>1701639073064</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Add whitelist functionality">
+      <option name="closed" value="true" />
+      <created>1702126806524</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1702126806524</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -164,6 +184,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value="Add whitelist functionality" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add whitelist functionality" />
   </component>
 </project>

@@ -6,6 +6,7 @@ import me.alexdevs.Utils;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageType;
 import net.dv8tion.jda.api.entities.Webhook;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -15,11 +16,11 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.slf4j.Logger;
-
-import java.util.Random;
 
 public class Bot {
     private final SMPCord smpCord;
@@ -151,14 +152,59 @@ public class Bot {
                     .text("]")
                     .color(NamedTextColor.WHITE))
                 .appendSpace()
-                .append(Component
-                    .text(getMemberName(member))
-                    .color(TextColor.color(member.getColorRaw())))
+                .append(getMemberNameComponent(member))
                 .append(Component.text(":"))
-                .appendSpace()
-                .append(Component.text(message.getContentRaw()));
+                .appendSpace();
 
-            proxy.sendMessage(text);
+
+            var raw = message.getContentRaw();
+
+            var messageType = event.getMessage().getType();
+            if (messageType == MessageType.INLINE_REPLY) {
+
+                var reference = event.getMessage().getMessageReference();
+                var refMessage = reference.getMessage();
+                String refUserName;
+                String refMention;
+                var refUserColor = NamedTextColor.WHITE.value();
+                if (refMessage.getMember() != null) {
+                    var refMember = refMessage.getMember();
+                    refUserName = refMember.getEffectiveName();
+                    refUserColor = refMember.getColorRaw();
+                    refMention = refMember.getAsMention();
+                } else {
+                    refUserName = refMessage.getAuthor().getEffectiveName();
+                    refMention = refUserName;
+                    raw = refUserName + ": " + raw;
+                }
+                text = text
+                    .append(Component
+                        .text("@")
+                        .color(NamedTextColor.BLUE)
+                    )
+                    .append(getMemberNameComponent(refUserName, refUserColor, refMention))
+                    .append(Component
+                        .text(":")
+                        .color(NamedTextColor.GRAY)
+                    )
+                    .appendSpace();
+            }
+
+            text = text.append(Component.text(message.getContentDisplay()));
+
+            smpCord.sendMessage(text, raw);
+        }
+
+        private Component getMemberNameComponent(Member member) {
+            return getMemberNameComponent(member.getEffectiveName(), member.getColorRaw(), member.getAsMention());
+        }
+
+        private Component getMemberNameComponent(String name, int color, String asMention) {
+            return Component
+                .text(name)
+                .color(TextColor.color(color))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to mention")))
+                .clickEvent(ClickEvent.suggestCommand(asMention + ": "));
         }
 
         private String getMemberName(Member member) {

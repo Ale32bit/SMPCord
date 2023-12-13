@@ -2,6 +2,8 @@ package me.alexdevs;
 
 import club.minnced.discord.webhook.external.JDAWebhookClient;
 import club.minnced.discord.webhook.send.*;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
@@ -9,21 +11,31 @@ import com.velocitypowered.api.event.PostOrder;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
+import com.velocitypowered.api.event.connection.PluginMessageEvent;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.event.player.PlayerChatEvent;
+import com.velocitypowered.api.event.player.ServerConnectedEvent;
+import com.velocitypowered.api.event.player.ServerPostConnectEvent;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyReloadEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
+import com.velocitypowered.api.proxy.ServerConnection;
+import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import me.alexdevs.Discord.Bot;
+import net.kyori.adventure.chat.ChatType;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.slf4j.Logger;
+
+import javax.annotation.Nullable;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -33,9 +45,10 @@ import java.util.HashMap;
 import java.util.UUID;
 
 @Plugin(id = "smpcord",
-    name = "SMPCord", version = "0.1.0-SNAPSHOT", url = "https://alexdevs.me",
-    authors = {"AlexDevs"}, description = "Whitelist manager for Devs.SMP();")
+    name = "SMPCord", version = "0.2.0", url = "https://alexdevs.me",
+    authors = {"AlexDevs"}, description = "Whitelist manager and Discord chat bridge for Devs.SMP();")
 public class SMPCord {
+    public static final MinecraftChannelIdentifier IDENTIFIER = MinecraftChannelIdentifier.from("smpcord:events");
     private final ProxyServer proxy;
     private final Logger logger;
     private final Path dataDirectory;
@@ -79,6 +92,7 @@ public class SMPCord {
         load();
 
         proxy.getEventManager().register(this, new SMPCordListener());
+        proxy.getChannelRegistrar().register(IDENTIFIER);
     }
 
     @Subscribe
@@ -127,6 +141,22 @@ public class SMPCord {
             writer.close();
         } catch (IOException e) {
             logger.error("Could not write to file: " + e.getMessage());
+        }
+    }
+
+    public void sendMessage(Component component, @Nullable String rawMessage) {
+        proxy.sendMessage(component);
+        if(rawMessage == null)
+            return;
+
+        // not working
+        var sound = Sound.sound(Key.key("minecraft:block.note_block.bell"), Sound.Source.PLAYER, 1f, 1f);
+        var players = proxy.getAllPlayers();
+        rawMessage = rawMessage.toLowerCase();
+        for(var player : players) {
+            if(rawMessage.contains(player.getUsername().toLowerCase())) {
+                player.playSound(sound, Sound.Emitter.self());
+            }
         }
     }
 
@@ -196,7 +226,7 @@ public class SMPCord {
 
 
         @Subscribe(order = PostOrder.LATE)
-        private void onPostLogin(PostLoginEvent event) {
+        private void onServerConnected(ServerConnectedEvent event) {
             var player = event.getPlayer();
             var username = player.getUsername();
 
@@ -214,6 +244,10 @@ public class SMPCord {
 
         @Subscribe
         private void onDisconnect(DisconnectEvent event) {
+            if(event.getLoginStatus() == DisconnectEvent.LoginStatus.CANCELLED_BY_PROXY
+            || event.getLoginStatus() == DisconnectEvent.LoginStatus.CANCELLED_BY_USER_BEFORE_COMPLETE)
+                return;
+
             var player = event.getPlayer();
             var username = player.getUsername();
 
@@ -245,6 +279,23 @@ public class SMPCord {
 
             sendWebhook(webhookMessage);
         }
+
+        @Subscribe
+        public void onPluginMessageFromBackend(PluginMessageEvent event) {
+            if (!(event.getSource() instanceof ServerConnection)) {
+                return;
+            }
+            var backend = (ServerConnection) event.getSource();
+            // Ensure the identifier is what you expect before trying to handle the data
+            if (event.getIdentifier() != IDENTIFIER) {
+                return;
+            }
+
+            ByteArrayDataInput in = ByteStreams.newDataInput(event.getData());
+            // handle packet data
+        }
+
+
 
         public void sendWebhook(WebhookMessage message) {
             var webhook = discordBot.getWebhook();
