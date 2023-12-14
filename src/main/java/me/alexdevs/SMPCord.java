@@ -26,6 +26,8 @@ import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import me.alexdevs.Discord.Bot;
 import net.kyori.adventure.chat.ChatType;
+import net.kyori.adventure.chat.SignedMessage;
+import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.text.Component;
@@ -45,7 +47,7 @@ import java.util.HashMap;
 import java.util.UUID;
 
 @Plugin(id = "smpcord",
-    name = "SMPCord", version = "0.2.0", url = "https://alexdevs.me",
+    name = "SMPCord", version = "0.3.0", url = "https://alexdevs.me",
     authors = {"AlexDevs"}, description = "Whitelist manager and Discord chat bridge for Devs.SMP();")
 public class SMPCord {
     public static final MinecraftChannelIdentifier IDENTIFIER = MinecraftChannelIdentifier.from("smpcord:events");
@@ -144,8 +146,8 @@ public class SMPCord {
         }
     }
 
-    public void sendMessage(Component component, @Nullable String rawMessage) {
-        proxy.sendMessage(component);
+    public void sendMessage(Component component, @Nullable String rawMessage, Identity identity) {
+        proxy.sendMessage(identity, component);
         if(rawMessage == null)
             return;
 
@@ -158,6 +160,10 @@ public class SMPCord {
                 player.playSound(sound, Sound.Emitter.self());
             }
         }
+    }
+
+    public void sendMessage(Component component, @Nullable String rawMessage) {
+        sendMessage(component, rawMessage, Identity.nil());
     }
 
     public SMPCordConfig getConfig() {

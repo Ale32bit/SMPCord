@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.kyori.adventure.identity.Identity;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -143,17 +144,13 @@ public class Bot {
 
             var text = Component.empty()
                 .append(Component
-                    .text("[")
-                    .color(NamedTextColor.WHITE))
-                .append(Component
                     .text("D")
-                    .color(TextColor.color(0x5865F2)))
-                .append(Component
-                    .text("]")
-                    .color(NamedTextColor.WHITE))
+                    .color(TextColor.color(0x5865F2))
+                    .hoverEvent(Component.text("Message from Discord")))
                 .appendSpace()
+                .append(Component.text("<"))
                 .append(getMemberNameComponent(member))
-                .append(Component.text(":"))
+                .append(Component.text(">"))
                 .appendSpace();
 
 
@@ -191,6 +188,19 @@ public class Bot {
             }
 
             text = text.append(Component.text(message.getContentDisplay()));
+
+            var attachments = message.getAttachments();
+            if (!attachments.isEmpty()) {
+                text = text.appendSpace();
+                for (var attachment : attachments) {
+                    text = text.append(Component
+                        .text("[" + attachment.getFileName() + "]")
+                        .color(NamedTextColor.BLUE)
+                        .hoverEvent(HoverEvent.showText(Component.text("Click to open URL: " + attachment.getUrl())))
+                        .clickEvent(ClickEvent.openUrl(attachment.getUrl())))
+                        .appendSpace();
+                }
+            }
 
             smpCord.sendMessage(text, raw);
         }
