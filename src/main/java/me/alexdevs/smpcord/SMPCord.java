@@ -1,9 +1,8 @@
 package me.alexdevs.smpcord;
 
-import club.minnced.discord.webhook.external.JDAWebhookClient;
-import club.minnced.discord.webhook.send.*;
 import com.mojang.logging.LogUtils;
-import discord4j.core.object.entity.channel.TextChannel;
+import discord4j.core.object.presence.ClientActivity;
+import discord4j.core.object.presence.ClientPresence;
 import discord4j.core.spec.EmbedCreateFields;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
@@ -49,10 +48,6 @@ public class SMPCord {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
-    public void sendWebhook(WebhookMessage message) {
-        var webhook = discordBot.getWebhook();
-    }
-
     public void sendMessage(Component component, String rawMessage) {
 
         var players = server.getPlayerList();
@@ -62,15 +57,13 @@ public class SMPCord {
     private void commonSetup(final FMLCommonSetupEvent event) {
         try {
             discordBot = new DiscordBot(this);
-            discordBot.getWebhook().execute()
-                    .withEmbeds(EmbedCreateSpec.create()
-                            .withDescription("**Server is starting...**")
-                            .withColor(Color.of(ChatFormatting.YELLOW.getColor()))
-                    )
-                    .block();
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage());
         }
+    }
+
+    private void updatePlayerCount(int count) {
+        discordBot.setPresence(ClientPresence.online(ClientActivity.playing(String.format("%d players online!", count))));
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
@@ -83,20 +76,24 @@ public class SMPCord {
     public void onServerStarted(ServerStartedEvent event) {
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withDescription("**Server started!**")
+                        .withDescription(":up: **Server started!**")
                         .withColor(Color.of(ChatFormatting.GREEN.getColor()))
                 )
-                .block();
+                .subscribe();
+
+        updatePlayerCount(0);
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withDescription("**Server is stopping!**")
+                        .withDescription(":electric_plug: **Server is stopping!**")
                         .withColor(Color.of(ChatFormatting.RED.getColor()))
                 )
-                .block();
+                .subscribe();
+
+        discordBot.setPresence(ClientPresence.doNotDisturb(ClientActivity.playing("Stopping...")));
     }
 
     @SubscribeEvent
@@ -111,7 +108,7 @@ public class SMPCord {
                 .withUsername(username)
                 .withContent(rawMessage)
                 .withAllowedMentions(discord4j.rest.util.AllowedMentions.suppressEveryone())
-                .block();
+                .subscribe();
     }
 
     @SubscribeEvent
@@ -127,9 +124,9 @@ public class SMPCord {
 
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s", stringMessage), avatarUrl, null))
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s", stringMessage), null, avatarUrl))
                         .withColor(Color.of(ChatFormatting.GRAY.getColor())))
-                .block();
+                .subscribe();
     }
 
     @SubscribeEvent
@@ -139,9 +136,14 @@ public class SMPCord {
 
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s joined the server", username), Utils.getAvatarThumbnailUrl(player), null))
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s joined the server", username), null, Utils.getAvatarThumbnailUrl(player)))
                         .withColor(Color.of(ChatFormatting.GREEN.getColor())))
-                .block();
+                .subscribe();
+
+        var server = event.getEntity().getServer();
+        if(server != null) {
+            updatePlayerCount(event.getEntity().getServer().getPlayerCount());
+        }
     }
 
     @SubscribeEvent
@@ -151,15 +153,20 @@ public class SMPCord {
 
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s left the server", username), Utils.getAvatarThumbnailUrl(player), null))
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s left the server", username), null, Utils.getAvatarThumbnailUrl(player)))
                         .withColor(Color.of(ChatFormatting.RED.getColor())))
-                .block();
+                .subscribe();
+
+        var server = event.getEntity().getServer();
+        if(server != null) {
+            updatePlayerCount(event.getEntity().getServer().getPlayerCount() - 1);
+        }
     }
 
     @SubscribeEvent
     public void onPlayerAdvancement(AdvancementEvent.AdvancementEarnEvent event) {
         var advancement = event.getAdvancement();
-        if(advancement.getDisplay() == null || !advancement.getDisplay().shouldAnnounceChat())
+        if (advancement.getDisplay() == null || !advancement.getDisplay().shouldAnnounceChat())
             return;
 
         var player = event.getEntity();
@@ -169,9 +176,9 @@ public class SMPCord {
 
         discordBot.getWebhook().execute()
                 .withEmbeds(EmbedCreateSpec.create()
-                        .withAuthor(EmbedCreateFields.Author.of(message, Utils.getAvatarThumbnailUrl(player), null))
+                        .withAuthor(EmbedCreateFields.Author.of(message, null, Utils.getAvatarThumbnailUrl(player)))
                         .withColor(Color.of(ChatFormatting.GOLD.getColor())))
-                .block();
+                .subscribe();
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent

@@ -69,12 +69,7 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
     shade('com.discord4j:discord4j-core:3.2.6') {
-        exclude group: 'io.netty', module: 'netty-codec'
-        exclude group: 'io.netty', module: 'netty-transport'
-    }
 
-    shade('club.minnced:discord-webhooks:0.8.4') {
-        exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 }
 
@@ -113,8 +108,8 @@ shadowJar {
     configurations = [project.configurations.shade]
 
     relocate 'discord4j', "${project.group}.relocated.discord4j"
-    relocate 'club.minnced', "${project.group}.relocated.club.minnced"
     relocate 'io.netty', "${project.group}.relocated.io.netty"
+    relocate 'kotlin', "${project.group}.relocated.kotlin"
 
     finalizedBy 'reobfShadowJar'
 }

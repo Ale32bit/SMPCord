@@ -1,30 +1,36 @@
 package me.alexdevs.smpcord;
 
-public class DiscordEventListener {
+import discord4j.common.util.Snowflake;
+import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.entity.Message;
+import discord4j.rest.util.Color;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.*;
+
+public class DiscordEvents {
     private final SMPCord smpCord;
 
-    public DiscordEventListener(SMPCord smpCord) {
+    public DiscordEvents(SMPCord smpCord) {
         this.smpCord = smpCord;
     }
 
-    /*@Override
-    public void onMessageReceived(MessageReceivedEvent event) {
-        var member = event.getMember();
+    public void onMessageCreate(MessageCreateEvent event) {
+        if(event.getMember().isEmpty())
+            return;
+        var member = event.getMember().get();
         var message = event.getMessage();
-        var channel = event.getGuildChannel().asStandardGuildMessageChannel();
-
-        if (!channel.getId().equals(Config.channelId))
+        var channel = message.getChannel().block();
+        if(channel == null)
             return;
 
-        if (member == null)
+        if (!channel.getId().equals(Snowflake.of(Config.channelId)))
             return;
 
-        var user = member.getUser();
-        if (user.isBot())
+        if (member.isBot())
             return;
 
 
-        SMPCord.LOGGER.info(member.getUser().getEffectiveName() + "> " + message.getContentRaw());
+        SMPCord.LOGGER.info(member.getDisplayName() + "> " + message.getContent());
 
         var text = Component.empty()
                 .append(Component
@@ -37,23 +43,32 @@ public class DiscordEventListener {
                 .append(Utils.getMemberNameComponent(member));
 
 
-        var raw = message.getContentRaw();
+        var raw = message.getContent();
 
+        message.getType();
         var messageType = event.getMessage().getType();
-        if (messageType == MessageType.INLINE_REPLY) {
+        if (messageType == Message.Type.REPLY && message.getReferencedMessage().isPresent()) {
 
-            var reference = event.getMessage().getMessageReference();
-            var refMessage = reference.getMessage();
+            var refMessage = message.getReferencedMessage().get();
             String refUserName;
             String refMention;
-            var refUserColor = ChatFormatting.WHITE.getColor();
-            if (refMessage.getMember() != null) {
-                var refMember = refMessage.getMember();
-                refUserName = refMember.getEffectiveName();
-                refUserColor = refMember.getColorRaw();
-                refMention = refMember.getAsMention();
+            var refUserColor = Color.of(ChatFormatting.WHITE.getColor());
+            if (refMessage.getAuthor().isPresent()) {
+                var refMember = refMessage.getAuthorAsMember().block();
+                if(refMember != null) {
+                    refUserName = refMember.getDisplayName();
+                    refUserColor = refMember.getColor().block();
+                    refMention = refMember.getMention();
+                } else {
+                    var author = refMessage.getAuthor().get();
+                    refUserName = author.getUsername();
+                    refMention = author.getMention();
+                }
+
             } else {
-                refUserName = refMessage.getAuthor().getEffectiveName();
+                var data = refMessage.getData();
+                var author = data.author();
+                refUserName = author.username();
                 refMention = refUserName;
                 raw = refUserName + ": " + raw;
             }
@@ -63,7 +78,7 @@ public class DiscordEventListener {
                                     .withColor(ChatFormatting.GRAY)
                                     .withItalic(true)
                                     .withHoverEvent(new HoverEvent(
-                                            HoverEvent.Action.SHOW_TEXT, Component.literal(refMessage.getContentDisplay())
+                                            HoverEvent.Action.SHOW_TEXT, Component.literal(refMessage.getContent())
                                     ))
                             )
                     )
@@ -71,19 +86,19 @@ public class DiscordEventListener {
                             .literal("@")
                             .withStyle(Style.EMPTY.withColor(Colors.BLURPLE))
                     )
-                    .append(Utils.getMemberNameComponent(refUserName, TextColor.fromRgb(refUserColor), refMention));
+                    .append(Utils.getMemberNameComponent(refUserName, TextColor.fromRgb(refUserColor.getRGB()), refMention));
         }
 
         text = text
                 .append(Component.literal("> "))
-                .append(Component.literal(message.getContentDisplay()));
+                .append(Component.literal(message.getContent()));
 
         var attachments = message.getAttachments();
         if (!attachments.isEmpty()) {
             text = text.append(Component.literal(" "));
             for (var attachment : attachments) {
                 text = text.append(Component
-                                .literal("[" + attachment.getFileName() + "]")
+                                .literal("[" + attachment.getFilename() + "]")
                                 .withStyle(Style.EMPTY
                                         .withColor(ChatFormatting.BLUE)
                                         .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to open URL: " + attachment.getUrl())))
@@ -93,5 +108,5 @@ public class DiscordEventListener {
         }
 
         smpCord.sendMessage(text, raw);
-    }*/
+    }
 }
