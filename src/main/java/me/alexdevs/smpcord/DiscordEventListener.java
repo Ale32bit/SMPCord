@@ -1,19 +1,13 @@
 package me.alexdevs.smpcord;
 
-import net.dv8tion.jda.api.entities.MessageType;
-import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.*;
-
-public class DiscordEventListener extends ListenerAdapter {
+public class DiscordEventListener {
     private final SMPCord smpCord;
 
     public DiscordEventListener(SMPCord smpCord) {
         this.smpCord = smpCord;
     }
 
-    @Override
+    /*@Override
     public void onMessageReceived(MessageReceivedEvent event) {
         var member = event.getMember();
         var message = event.getMessage();
@@ -99,5 +93,5 @@ public class DiscordEventListener extends ListenerAdapter {
         }
 
         smpCord.sendMessage(text, raw);
-    }
+    }*/
 }

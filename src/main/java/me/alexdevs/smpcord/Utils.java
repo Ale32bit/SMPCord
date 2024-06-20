@@ -1,6 +1,6 @@
 package me.alexdevs.smpcord;
 
-import net.dv8tion.jda.api.entities.Member;
+import discord4j.core.object.entity.Member;
 import net.minecraft.network.chat.*;
 import net.minecraft.world.entity.player.Player;
 
@@ -16,7 +16,7 @@ public class Utils {
     }
 
     public static Component getMemberNameComponent(Member member) {
-        return getMemberNameComponent(member.getEffectiveName(), TextColor.fromRgb(member.getColorRaw()), member.getAsMention());
+        return getMemberNameComponent(member.getDisplayName(), TextColor.fromRgb(member.getColor().block().getRGB()), member.getMention());
     }
 
     public static Component getMemberNameComponent(String name, TextColor color, String asMention) {
@@ -33,9 +33,6 @@ public class Utils {
         if (member == null) {
             return "Unknown User";
         }
-        var name = member.getNickname();
-        if (name == null)
-            name = member.getUser().getName();
-        return name;
+        return member.getDisplayName();
     }
 }

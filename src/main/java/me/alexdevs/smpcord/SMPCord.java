@@ -3,6 +3,10 @@ package me.alexdevs.smpcord;
 import club.minnced.discord.webhook.external.JDAWebhookClient;
 import club.minnced.discord.webhook.send.*;
 import com.mojang.logging.LogUtils;
+import discord4j.core.object.entity.channel.TextChannel;
+import discord4j.core.spec.EmbedCreateFields;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.rest.util.Color;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -47,9 +51,6 @@ public class SMPCord {
 
     public void sendWebhook(WebhookMessage message) {
         var webhook = discordBot.getWebhook();
-        try (var client = JDAWebhookClient.from(webhook)) {
-            client.send(message);
-        }
     }
 
     public void sendMessage(Component component, String rawMessage) {
@@ -61,17 +62,12 @@ public class SMPCord {
     private void commonSetup(final FMLCommonSetupEvent event) {
         try {
             discordBot = new DiscordBot(this);
-
-            var embed = new WebhookEmbedBuilder()
-                    .setAuthor(new WebhookEmbed.EmbedAuthor("Server is starting...", null, null))
-                    .setColor(ChatFormatting.YELLOW.getColor())
-                    .build();
-
-            var webhookMessage = new WebhookMessageBuilder()
-                    .addEmbeds(embed)
-                    .build();
-
-            sendWebhook(webhookMessage);
+            discordBot.getWebhook().execute()
+                    .withEmbeds(EmbedCreateSpec.create()
+                            .withDescription("**Server is starting...**")
+                            .withColor(Color.of(ChatFormatting.YELLOW.getColor()))
+                    )
+                    .block();
         } catch (InterruptedException e) {
             LOGGER.error(e.getMessage());
         }
@@ -85,30 +81,22 @@ public class SMPCord {
 
     @SubscribeEvent
     public void onServerStarted(ServerStartedEvent event) {
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor("Server started!", null, null))
-                .setColor(ChatFormatting.GREEN.getColor())
-                .build();
-
-        var webhookMessage = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhookMessage);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withDescription("**Server started!**")
+                        .withColor(Color.of(ChatFormatting.GREEN.getColor()))
+                )
+                .block();
     }
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor("Server is stopping!", null, null))
-                .setColor(ChatFormatting.RED.getColor())
-                .build();
-
-        var webhookMessage = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhookMessage);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withDescription("**Server is stopping!**")
+                        .withColor(Color.of(ChatFormatting.RED.getColor()))
+                )
+                .block();
     }
 
     @SubscribeEvent
@@ -116,17 +104,14 @@ public class SMPCord {
         var username = event.getUsername();
         var player = event.getPlayer();
         var rawMessage = event.getRawText();
-
         var avatarUrl = Utils.getAvatarUrl(player);
-        var webhookMessage = new WebhookMessageBuilder()
-                .setUsername(username)
-                .setContent(rawMessage)
-                .setAvatarUrl(avatarUrl)
-                .setAllowedMentions(new AllowedMentions()
-                        .withParseUsers(true))
-                .build();
 
-        sendWebhook(webhookMessage);
+        discordBot.getWebhook().execute()
+                .withAvatarUrl(avatarUrl)
+                .withUsername(username)
+                .withContent(rawMessage)
+                .withAllowedMentions(discord4j.rest.util.AllowedMentions.suppressEveryone())
+                .block();
     }
 
     @SubscribeEvent
@@ -138,17 +123,13 @@ public class SMPCord {
         var source = event.getSource();
         var deathMessage = source.getLocalizedDeathMessage(entity);
         var stringMessage = deathMessage.getString();
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor(String.format("%s", stringMessage),
-                        Utils.getAvatarThumbnailUrl(player), null))
-                .setColor(ChatFormatting.GRAY.getColor())
-                .build();
+        var avatarUrl = Utils.getAvatarThumbnailUrl(player);
 
-        var webhookMessage = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhookMessage);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s", stringMessage), avatarUrl, null))
+                        .withColor(Color.of(ChatFormatting.GRAY.getColor())))
+                .block();
     }
 
     @SubscribeEvent
@@ -156,17 +137,11 @@ public class SMPCord {
         var player = event.getEntity();
         var username = player.getName().getString();
 
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor(String.format("%s joined the server", username),
-                        Utils.getAvatarThumbnailUrl(player), null))
-                .setColor(ChatFormatting.GREEN.getColor())
-                .build();
-
-        var webhook = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhook);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s joined the server", username), Utils.getAvatarThumbnailUrl(player), null))
+                        .withColor(Color.of(ChatFormatting.GREEN.getColor())))
+                .block();
     }
 
     @SubscribeEvent
@@ -174,17 +149,11 @@ public class SMPCord {
         var player = event.getEntity();
         var username = player.getName().getString();
 
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor(String.format("%s left the server", username),
-                        Utils.getAvatarThumbnailUrl(player), null))
-                .setColor(ChatFormatting.RED.getColor())
-                .build();
-
-        var webhook = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhook);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withAuthor(EmbedCreateFields.Author.of(String.format("%s left the server", username), Utils.getAvatarThumbnailUrl(player), null))
+                        .withColor(Color.of(ChatFormatting.RED.getColor())))
+                .block();
     }
 
     @SubscribeEvent
@@ -198,17 +167,11 @@ public class SMPCord {
 
         var message = String.format("%s has made the advancement [%s]", username, advancement.getDisplay().getTitle().getString());
 
-        var embed = new WebhookEmbedBuilder()
-                .setAuthor(new WebhookEmbed.EmbedAuthor(message,
-                        Utils.getAvatarThumbnailUrl(player), null))
-                .setColor(ChatFormatting.GOLD.getColor())
-                .build();
-
-        var webhook = new WebhookMessageBuilder()
-                .addEmbeds(embed)
-                .build();
-
-        sendWebhook(webhook);
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withAuthor(EmbedCreateFields.Author.of(message, Utils.getAvatarThumbnailUrl(player), null))
+                        .withColor(Color.of(ChatFormatting.GOLD.getColor())))
+                .block();
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
