@@ -34,7 +34,11 @@ public class Config
 
     private static final ForgeConfigSpec.ConfigValue<String> AVATAR_API_THUMBNAIL_URL = BUILDER
             .comment("Avatar API URL\nUsed by login, logout and other similar events.\nPlaceholder: {{uuid}}: User UUID")
-            .define("avatarApiThumbnailUrl", "https://mc-heads.net/head/{{uuid}}/16");
+            .define("avatarApiThumbnailUrl", "https://mc-heads.net/head/{{uuid}}/32");
+
+    private static final ForgeConfigSpec.ConfigValue<String> INVITE_LINK = BUILDER
+            .comment("Invite link\nUsed when clicking the D prefix in a message from Discord.")
+            .define("inviteLink", "https://discord.gg/myinvite");
 
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
@@ -44,12 +48,7 @@ public class Config
     public static String roleId;
     public static String avatarApiUrl;
     public static String avatarApiThumbnailUrl;
-
-
-    private static boolean validateItemName(final Object obj)
-    {
-        return obj instanceof final String itemName && ForgeRegistries.ITEMS.containsKey(new ResourceLocation(itemName));
-    }
+    public static String inviteLink;
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
@@ -60,5 +59,6 @@ public class Config
         roleId = ROLE_ID.get();
         avatarApiUrl = AVATAR_API_URL.get();
         avatarApiThumbnailUrl = AVATAR_API_THUMBNAIL_URL.get();
+        inviteLink = INVITE_LINK.get();
     }
 }

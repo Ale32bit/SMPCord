@@ -69,17 +69,6 @@ public class DiscordBot {
                 if (this.webhook == null) {
                     this.webhook = channel.createWebhook(Config.webhookName).block();
                 }
-
-                this.webhook.execute()
-                        .withEmbeds(EmbedCreateSpec.create()
-                                .withDescription(":hourglass: **Server is starting...**")
-                                .withColor(Color.of(ChatFormatting.YELLOW.getColor()))
-                        )
-                        .subscribe();
-
-                event.getClient()
-                        .updatePresence(ClientPresence.idle(ClientActivity.playing("Starting...")))
-                        .subscribe();
             });
 
             // Listen for MessageCreateEvent

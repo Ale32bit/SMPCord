@@ -69,7 +69,15 @@ public class SMPCord {
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        server = event.getServer();
+        discordBot.getWebhook().execute()
+                .withEmbeds(EmbedCreateSpec.create()
+                        .withDescription(":hourglass: **Server is starting...**")
+                        .withColor(Color.of(ChatFormatting.YELLOW.getColor()))
+                )
+                .subscribe();
+
+        discordBot.setPresence(ClientPresence.idle(ClientActivity.playing("Starting...")));
+
     }
 
     @SubscribeEvent

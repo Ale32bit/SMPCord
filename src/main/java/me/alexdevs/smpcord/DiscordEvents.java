@@ -5,7 +5,9 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.rest.util.Color;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.network.chat.*;
+import net.minecraft.world.inventory.ClickAction;
 
 public class DiscordEvents {
     private final SMPCord smpCord;
@@ -15,9 +17,6 @@ public class DiscordEvents {
     }
 
     public void onMessageCreate(MessageCreateEvent event) {
-        if(event.getMember().isEmpty())
-            return;
-        var member = event.getMember().get();
         var message = event.getMessage();
         var channel = message.getChannel().block();
         if(channel == null)
@@ -26,11 +25,20 @@ public class DiscordEvents {
         if (!channel.getId().equals(Snowflake.of(Config.channelId)))
             return;
 
+        if(event.getMember().isEmpty())
+            return;
+
+        var member = event.getMember().get();
         if (member.isBot())
             return;
 
+        int memberColor = ChatFormatting.WHITE.getColor();
 
-        SMPCord.LOGGER.info(member.getDisplayName() + "> " + message.getContent());
+        var nullableMemberColor = member.getColor().block();
+        if(nullableMemberColor != null) {
+            memberColor = nullableMemberColor.getRGB();
+        }
+        var memberComponent = ChatComponents.makeUser(member.getUsername(), member.getMention() + ": ", memberColor, ChatComponents.mentionIcon);
 
         var text = Component.empty()
                 .append(Component
@@ -42,10 +50,8 @@ public class DiscordEvents {
                 .append(Component.literal(" <"))
                 .append(Utils.getMemberNameComponent(member));
 
-
         var raw = message.getContent();
 
-        message.getType();
         var messageType = event.getMessage().getType();
         if (messageType == Message.Type.REPLY && message.getReferencedMessage().isPresent()) {
 
