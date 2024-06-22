@@ -73,7 +73,11 @@ public class DiscordBot {
 
             // Listen for MessageCreateEvent
             client.on(MessageCreateEvent.class).subscribe(event -> {
-                events.onMessageCreate(event);
+                try {
+                    events.onMessageCreate(event);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             });
             return Mono.empty();
         }).block();

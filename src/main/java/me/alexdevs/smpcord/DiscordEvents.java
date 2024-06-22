@@ -3,29 +3,55 @@ package me.alexdevs.smpcord;
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
-import discord4j.rest.util.Color;
+import discord4j.core.object.entity.channel.Channel;
+import discord4j.core.object.entity.channel.GuildChannel;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.network.chat.*;
-import net.minecraft.world.inventory.ClickAction;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DiscordEvents {
+    private static final Pattern mentionPattern = Pattern.compile("(<@[!&]?\\d+>|<#\\d+>)");
+    private static final Pattern integerPattern = Pattern.compile("\\d+");
     private final SMPCord smpCord;
 
     public DiscordEvents(SMPCord smpCord) {
         this.smpCord = smpCord;
     }
 
+    public static List<String> splitMessage(String message) {
+        List<String> parts = new ArrayList<>();
+        Matcher matcher = mentionPattern.matcher(message);
+
+        int lastEnd = 0;
+        while (matcher.find()) {
+            if (matcher.start() > lastEnd) {
+                parts.add(message.substring(lastEnd, matcher.start()));
+            }
+            parts.add(matcher.group(1));
+            lastEnd = matcher.end();
+        }
+
+        if (lastEnd < message.length()) {
+            parts.add(message.substring(lastEnd));
+        }
+
+        return parts;
+    }
+
     public void onMessageCreate(MessageCreateEvent event) {
         var message = event.getMessage();
         var channel = message.getChannel().block();
-        if(channel == null)
+        if (channel == null)
             return;
 
         if (!channel.getId().equals(Snowflake.of(Config.channelId)))
             return;
 
-        if(event.getMember().isEmpty())
+        if (event.getMember().isEmpty())
             return;
 
         var member = event.getMember().get();
@@ -35,84 +61,129 @@ public class DiscordEvents {
         int memberColor = ChatFormatting.WHITE.getColor();
 
         var nullableMemberColor = member.getColor().block();
-        if(nullableMemberColor != null) {
+        if (nullableMemberColor != null) {
             memberColor = nullableMemberColor.getRGB();
         }
-        var memberComponent = ChatComponents.makeUser(member.getUsername(), member.getMention() + ": ", memberColor, ChatComponents.mentionIcon);
+        var memberComponent = ChatComponents.makeUser(member.getDisplayName(), member.getMention() + ": ", memberColor, Component.empty());
+        Component messageHeaderComponent;
 
-        var text = Component.empty()
-                .append(Component
-                        .literal("D")
-                        .withStyle(Style.EMPTY
-                                .withColor(Colors.BLURPLE)
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Message from the Discord server"))))
-                )
-                .append(Component.literal(" <"))
-                .append(Utils.getMemberNameComponent(member));
+        if (message.getType() == Message.Type.REPLY && message.getReferencedMessage().isPresent()) {
+            var referencedMessage = message.getReferencedMessage().get();
+            Component referenceMemberComponent;
+            var referenceMember = referencedMessage.getAuthorAsMember().block();
+            if (referenceMember != null) {
+                var referenceMemberColor = ChatFormatting.WHITE.getColor();
+                var nullableReferenceMemberColor = member.getColor().block();
+                if (nullableReferenceMemberColor != null) {
+                    referenceMemberColor = nullableReferenceMemberColor.getRGB();
+                }
+                referenceMemberComponent = ChatComponents.makeUser(referenceMember.getDisplayName(), referenceMember.getMention() + ": ", referenceMemberColor, Component.empty());
+            } else if (referencedMessage.getAuthor().isPresent()) {
+                var referenceAuthor = referencedMessage.getAuthor().get();
+                referenceMemberComponent = ChatComponents.makeUser(referenceAuthor.getUsername(), referenceAuthor.getMention() + ": ", ChatFormatting.WHITE.getColor(), Component.empty());
+            } else {
+                var referenceData = referencedMessage.getData();
+                var referenceAuthor = referenceData.author();
+                referenceMemberComponent = ChatComponents.makeUser(referenceAuthor.username(), referenceAuthor.username() + ": ", ChatFormatting.WHITE.getColor(), Component.empty());
+            }
 
-        var raw = message.getContent();
+            messageHeaderComponent = ChatComponents.makeReplyHeader(memberComponent, referenceMemberComponent, Component.literal(referencedMessage.getContent()));
+        } else {
+            messageHeaderComponent = memberComponent;
+        }
 
-        var messageType = event.getMessage().getType();
-        if (messageType == Message.Type.REPLY && message.getReferencedMessage().isPresent()) {
+        var messageContent = message.getContent();
+        var messageComponent = Component.empty();
 
-            var refMessage = message.getReferencedMessage().get();
-            String refUserName;
-            String refMention;
-            var refUserColor = Color.of(ChatFormatting.WHITE.getColor());
-            if (refMessage.getAuthor().isPresent()) {
-                var refMember = refMessage.getAuthorAsMember().block();
-                if(refMember != null) {
-                    refUserName = refMember.getDisplayName();
-                    refUserColor = refMember.getColor().block();
-                    refMention = refMember.getMention();
+        var splitContent = splitMessage(messageContent);
+        var memberMentions = message.getMemberMentions();
+        var roleMentions = message.getRoleMentions();
+        for (var part : splitContent) {
+            if (part.matches(mentionPattern.pattern())) {
+                var matcher = integerPattern.matcher(part);
+                if(matcher.find()) {
+                    var snowflakeId = Snowflake.of(matcher.group());
+                    if (part.startsWith("<@&")) { // Role mention
+                        var mentionedRole = roleMentions.filter(p -> p.getId().equals(snowflakeId)).blockFirst();
+                        if (mentionedRole != null) {
+                            int color = mentionedRole.getColor().getRGB();
+                            if(color == 0) {
+                                color = 0x99aab5;
+                            }
+                            messageComponent.append(ChatComponents.makeUser(
+                                    mentionedRole.getName(),
+                                    mentionedRole.getMention() + ": ",
+                                    color,
+                                    ChatComponents.mentionIcon
+                            ));
+                        } else {
+                            messageComponent.append(ChatComponents.makeUser(
+                                    "unknown-role",
+                                    String.format("<@&%s>: ", snowflakeId.asString()),
+                                    ChatFormatting.WHITE.getColor(),
+                                    ChatComponents.mentionIcon
+                            ));
+                        }
+                    } else if (part.startsWith("<@") || part.startsWith("<@!")) { // Member mention
+                        var mentionedOpt = memberMentions.stream().filter(p -> p.getId().equals(snowflakeId)).findFirst();
+                        if (mentionedOpt.isPresent()) {
+                            var mentioned = mentionedOpt.get();
+                            messageComponent.append(ChatComponents.makeUser(
+                                    mentioned.getDisplayName(),
+                                    mentioned.getMention() + ": ",
+                                    Colors.MENTION.getValue(),
+                                    ChatComponents.mentionIcon
+                            ));
+                        } else {
+                            messageComponent.append(ChatComponents.makeUser(
+                                    "unknown-user",
+                                    String.format("<@%s>: ", snowflakeId.asString()),
+                                    Colors.MENTION.getValue(),
+                                    ChatComponents.mentionIcon
+                            ));
+                        }
+                    } else if (part.startsWith("<#")) { // Channel mention
+                        var mentionedChannel = message.getClient().getChannelById(snowflakeId).block();
+                        if (mentionedChannel != null
+                                && (mentionedChannel.getType() == Channel.Type.GUILD_TEXT
+                                || mentionedChannel.getType() == Channel.Type.GUILD_VOICE
+                                || mentionedChannel.getType() == Channel.Type.GUILD_NEWS)) {
+
+                            var guildChannel = (GuildChannel) mentionedChannel;
+                            messageComponent.append(ChatComponents.makeUser(
+                                    guildChannel.getName(),
+                                    guildChannel.getMention() + ": ",
+                                    Colors.MENTION.getValue(),
+                                    ChatComponents.mentionIcon
+                            ));
+                        } else {
+                            messageComponent.append(ChatComponents.makeUser(
+                                    "unknown",
+                                    String.format("<#%s>: ", snowflakeId.asString()),
+                                    Colors.MENTION.getValue(),
+                                    ChatComponents.channelIcon
+                            ));
+                        }
+                    }
                 } else {
-                    var author = refMessage.getAuthor().get();
-                    refUserName = author.getUsername();
-                    refMention = author.getMention();
+                    messageComponent.append(Component.literal(part));
                 }
 
             } else {
-                var data = refMessage.getData();
-                var author = data.author();
-                refUserName = author.username();
-                refMention = refUserName;
-                raw = refUserName + ": " + raw;
+                messageComponent.append(Component.literal(part));
             }
-            text = text
-                    .append(Component.literal(" to ")
-                            .withStyle(Style.EMPTY
-                                    .withColor(ChatFormatting.GRAY)
-                                    .withItalic(true)
-                                    .withHoverEvent(new HoverEvent(
-                                            HoverEvent.Action.SHOW_TEXT, Component.literal(refMessage.getContent())
-                                    ))
-                            )
-                    )
-                    .append(Component
-                            .literal("@")
-                            .withStyle(Style.EMPTY.withColor(Colors.BLURPLE))
-                    )
-                    .append(Utils.getMemberNameComponent(refUserName, TextColor.fromRgb(refUserColor.getRGB()), refMention));
         }
-
-        text = text
-                .append(Component.literal("> "))
-                .append(Component.literal(message.getContent()));
 
         var attachments = message.getAttachments();
-        if (!attachments.isEmpty()) {
-            text = text.append(Component.literal(" "));
-            for (var attachment : attachments) {
-                text = text.append(Component
-                                .literal("[" + attachment.getFilename() + "]")
-                                .withStyle(Style.EMPTY
-                                        .withColor(ChatFormatting.BLUE)
-                                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to open URL: " + attachment.getUrl())))
-                                        .withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, attachment.getUrl()))))
-                        .append(Component.literal(" "));
-            }
+        if (!messageContent.isEmpty()) {
+            messageComponent.append(ChatComponents.WHITESPACE);
+        }
+        for (var attachment : attachments) {
+            messageComponent.append(ChatComponents.makeAttachment(attachment.getFilename(), attachment.getUrl()));
         }
 
-        smpCord.sendMessage(text, raw);
+        var outputComponent = ChatComponents.makeMessage(messageHeaderComponent, messageComponent);
+
+        smpCord.sendMessage(outputComponent);
     }
 }

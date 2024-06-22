@@ -48,8 +48,7 @@ public class SMPCord {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
-    public void sendMessage(Component component, String rawMessage) {
-
+    public void sendMessage(Component component) {
         var players = server.getPlayerList();
         players.broadcastSystemMessage(component, false);
     }
@@ -66,7 +65,6 @@ public class SMPCord {
         discordBot.setPresence(ClientPresence.online(ClientActivity.playing(String.format("%d players online!", count))));
     }
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         discordBot.getWebhook().execute()
@@ -88,6 +86,8 @@ public class SMPCord {
                         .withColor(Color.of(ChatFormatting.GREEN.getColor()))
                 )
                 .subscribe();
+
+        this.server = event.getServer();
 
         updatePlayerCount(0);
     }

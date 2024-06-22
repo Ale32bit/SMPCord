@@ -25,6 +25,11 @@ public class ChatComponents {
             .withStyle(Style.EMPTY
                     .withColor(0x5865F2));
 
+    public static final Component channelIcon = Component
+            .literal("#")
+            .withStyle(Style.EMPTY
+                    .withColor(0x5865F2));
+
     public static final Component WHITESPACE = Component.literal(" ");
 
     public static Component makeUser(String name, String suggest, int color, @Nullable Component prefix) {
