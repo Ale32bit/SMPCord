@@ -62,7 +62,7 @@ public class SMPCord {
     }
 
     private void updatePlayerCount(int count) {
-        discordBot.setPresence(ClientPresence.online(ClientActivity.playing(String.format("%d players online!", count))));
+        discordBot.setPresence(ClientPresence.online(ClientActivity.playing(String.format("with %d players!", count))));
     }
 
     @SubscribeEvent

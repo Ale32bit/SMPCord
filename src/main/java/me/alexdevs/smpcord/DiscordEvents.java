@@ -154,7 +154,7 @@ public class DiscordEvents {
                                     guildChannel.getName(),
                                     guildChannel.getMention() + ": ",
                                     Colors.MENTION.getValue(),
-                                    ChatComponents.mentionIcon
+                                    ChatComponents.channelIcon
                             ));
                         } else {
                             messageComponent.append(ChatComponents.makeUser(
