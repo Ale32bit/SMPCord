@@ -7,6 +7,7 @@ import discord4j.core.spec.EmbedCreateFields;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
 import me.alexdevs.smpcord.commands.DiscordCommand;
+import me.alexdevs.smpcord.commands.LinkCommand;
 import me.alexdevs.smpcord.discord.DiscordBot;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -32,14 +33,29 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
+import java.util.HashMap;
+import java.util.UUID;
+
 @Mod(SMPCord.MODID)
 public class SMPCord {
     public static final String MODID = "smpcord";
     public static final Logger LOGGER = LogUtils.getLogger();
+    private static SMPCord instance;
+    public static SMPCord instance() {
+        return instance;
+    }
     public MinecraftServer server;
     private DiscordBot discordBot;
+    private Links links;
+    public final HashMap<String, UUID> pendingLinks = new HashMap<>();
+    public final HashMap<UUID, String> usernameCache = new HashMap<>();
+
+    public Links links() {
+        return links;
+    }
 
     public SMPCord() {
+        instance = this;
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
         modEventBus.addListener(this::commonSetup);
@@ -56,8 +72,9 @@ public class SMPCord {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         try {
+            links = Links.load();
             discordBot = new DiscordBot(this);
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             LOGGER.error(e.getMessage());
         }
     }
@@ -69,6 +86,7 @@ public class SMPCord {
     @SubscribeEvent
     public void onCommandsRegister(RegisterCommandsEvent event) {
         DiscordCommand.register(event.getDispatcher());
+        LinkCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent

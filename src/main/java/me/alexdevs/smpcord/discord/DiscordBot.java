@@ -3,16 +3,20 @@ package me.alexdevs.smpcord.discord;
 import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
+import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Webhook;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.core.object.presence.ClientPresence;
+import discord4j.core.spec.InteractionApplicationCommandCallbackReplyMono;
 import discord4j.gateway.intent.Intent;
 import discord4j.gateway.intent.IntentSet;
 import me.alexdevs.smpcord.Config;
 import me.alexdevs.smpcord.SMPCord;
 import reactor.core.publisher.Mono;
+
+import java.io.IOException;
 
 public class DiscordBot {
     private final SMPCord smpCord;
@@ -84,5 +88,28 @@ public class DiscordBot {
 
     public void setPresence(ClientPresence presence) {
         client.updatePresence(presence).subscribe();
+    }
+
+    private InteractionApplicationCommandCallbackReplyMono linkPlayer(ChatInputInteractionEvent event) {
+        var code = event.getOption("code").get().getValue().get().asString();
+        if (!smpCord.pendingLinks.containsKey(code)) {
+            return event.reply("Unknown code! Run `/link` in the server to get a code.");
+        }
+
+        var uuid = smpCord.pendingLinks.get(code);
+
+        var member = event.getInteraction().getMember().get();
+        var userId = member.getId().asString();
+
+        smpCord.links().players.put(uuid, userId);
+        try {
+            smpCord.links().save();
+        } catch (IOException e) {
+            SMPCord.LOGGER.error("Error saving links.json", e);
+        }
+
+        member.addRole(Snowflake.of(Config.roleId), "Automatic link").subscribe();
+
+        return event.reply("You have linked your Discord account!");
     }
 }
