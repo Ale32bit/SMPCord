@@ -1,4 +1,4 @@
-package me.alexdevs.smpcord;
+package me.alexdevs.smpcord.discord;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.DiscordClientBuilder;
@@ -7,13 +7,11 @@ import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Webhook;
 import discord4j.core.object.entity.channel.TextChannel;
-import discord4j.core.object.presence.ClientActivity;
 import discord4j.core.object.presence.ClientPresence;
-import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.gateway.intent.Intent;
 import discord4j.gateway.intent.IntentSet;
-import discord4j.rest.util.Color;
-import net.minecraft.ChatFormatting;
+import me.alexdevs.smpcord.Config;
+import me.alexdevs.smpcord.SMPCord;
 import reactor.core.publisher.Mono;
 
 public class DiscordBot {

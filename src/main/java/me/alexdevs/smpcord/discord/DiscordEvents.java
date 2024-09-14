@@ -1,10 +1,14 @@
-package me.alexdevs.smpcord;
+package me.alexdevs.smpcord.discord;
 
 import discord4j.common.util.Snowflake;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.channel.Channel;
 import discord4j.core.object.entity.channel.GuildChannel;
+import me.alexdevs.smpcord.ChatComponents;
+import me.alexdevs.smpcord.Colors;
+import me.alexdevs.smpcord.Config;
+import me.alexdevs.smpcord.SMPCord;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.*;
 

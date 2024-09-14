@@ -6,12 +6,15 @@ import discord4j.core.object.presence.ClientPresence;
 import discord4j.core.spec.EmbedCreateFields;
 import discord4j.core.spec.EmbedCreateSpec;
 import discord4j.rest.util.Color;
+import me.alexdevs.smpcord.commands.DiscordCommand;
+import me.alexdevs.smpcord.discord.DiscordBot;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.AdvancementEvent;
@@ -28,8 +31,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
-
-import javax.annotation.Nullable;
 
 @Mod(SMPCord.MODID)
 public class SMPCord {
@@ -63,6 +64,11 @@ public class SMPCord {
 
     private void updatePlayerCount(int count) {
         discordBot.setPresence(ClientPresence.online(ClientActivity.playing(String.format("with %d players!", count))));
+    }
+
+    @SubscribeEvent
+    public void onCommandsRegister(RegisterCommandsEvent event) {
+        DiscordCommand.register(event.getDispatcher());
     }
 
     @SubscribeEvent

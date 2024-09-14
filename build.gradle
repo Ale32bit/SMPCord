@@ -3,8 +3,8 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
-    id 'io.github.goooler.shadow' version '8.1.7'
     id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+    id 'io.github.goooler.shadow' version '8.1.7'
 }
 
 
@@ -20,7 +20,7 @@ java {
 }
 
 minecraft {
-    mappings channel: 'parchment', version: '2022.11.27-1.19.2'
+    mappings channel: mapping_channel, version: mapping_version
     copyIdeResources = true
     runs {
         configureEach {
@@ -110,6 +110,8 @@ shadowJar {
     relocate 'discord4j', "${project.group}.relocated.discord4j"
     relocate 'io.netty', "${project.group}.relocated.io.netty"
     relocate 'kotlin', "${project.group}.relocated.kotlin"
+
+    exclude 'org/checkerframework/**'
 
     finalizedBy 'reobfShadowJar'
 }
