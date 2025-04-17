@@ -1,49 +1,58 @@
 package me.alexdevs.smpcord.discord;
 
 import discord4j.common.util.Snowflake;
+import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.MessageUpdateEvent;
+import discord4j.core.object.entity.Member;
 import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.channel.Channel;
-import discord4j.core.object.entity.channel.GuildChannel;
+import discord4j.core.spec.InteractionApplicationCommandCallbackReplyMono;
+import eu.pb4.placeholders.api.parsers.NodeParser;
 import me.alexdevs.smpcord.ChatComponents;
-import me.alexdevs.smpcord.Colors;
 import me.alexdevs.smpcord.Config;
 import me.alexdevs.smpcord.SMPCord;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.*;
+import me.alexdevs.smpcord.parser.MarkdownParser;
+import me.alexdevs.smpcord.parser.MentionNodeParser;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
 
 public class DiscordEvents {
-    private static final Pattern mentionPattern = Pattern.compile("(<@[!&]?\\d+>|<#\\d+>)");
-    private static final Pattern integerPattern = Pattern.compile("\\d+");
+    private final HashMap<String, String> messageCache = new HashMap<>();
     private final SMPCord smpCord;
 
     public DiscordEvents(SMPCord smpCord) {
         this.smpCord = smpCord;
     }
 
-    public static List<String> splitMessage(String message) {
-        List<String> parts = new ArrayList<>();
-        Matcher matcher = mentionPattern.matcher(message);
-
-        int lastEnd = 0;
-        while (matcher.find()) {
-            if (matcher.start() > lastEnd) {
-                parts.add(message.substring(lastEnd, matcher.start()));
-            }
-            parts.add(matcher.group(1));
-            lastEnd = matcher.end();
+    private boolean isActuallyEdited(String id, String content) {
+        MessageDigest messageDigest;
+        try {
+            messageDigest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            SMPCord.LOGGER.error("sha256 no longer exists :(", e);
+            return true;
         }
 
-        if (lastEnd < message.length()) {
-            parts.add(message.substring(lastEnd));
+        var digest = new String(messageDigest.digest(content.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+
+        if (!messageCache.containsKey(id)) {
+            messageCache.put(id, digest);
+            return false;
         }
 
-        return parts;
+        if (!messageCache.get(id).equals(content)) {
+            messageCache.put(id, content);
+            return true;
+        }
+
+        return false;
     }
 
     public void onMessageCreate(MessageCreateEvent event) {
@@ -62,132 +71,145 @@ public class DiscordEvents {
         if (member.isBot())
             return;
 
-        int memberColor = ChatFormatting.WHITE.getColor();
+        buildMessage(message, member, false);
+    }
 
-        var nullableMemberColor = member.getColor().block();
-        if (nullableMemberColor != null) {
-            memberColor = nullableMemberColor.getRGB();
+    public void onMessageEdit(MessageUpdateEvent event) {
+        var message = event.getMessage().block();
+        var channel = message.getChannel().block();
+        if (channel == null)
+            return;
+
+        if (!channel.getId().equals(Snowflake.of(Config.channelId)))
+            return;
+
+        var memberOpt = message.getAuthorAsMember().blockOptional();
+        if (memberOpt.isEmpty())
+            return;
+
+        var member = memberOpt.get();
+        if (member.isBot())
+            return;
+
+        buildMessage(message, member, true);
+    }
+
+    public void buildMessage(Message message, Member member, boolean isEdited) {
+        var isActuallyEdited = isActuallyEdited(message.getId().asString(), message.getContent());
+        if (isEdited && !isActuallyEdited) {
+            return;
+        }
+        isEdited = isActuallyEdited;
+
+        if (isEdited) {
+            //DiscordMessageEvents.MESSAGE_EDIT.invoker().onEdit(message, member);
+        } else {
+            //DiscordMessageEvents.MESSAGE_CREATE.invoker().onCreate(message, member);
+        }
+
+        int memberColor = NamedTextColor.WHITE.value();
+
+        var nullableMemberColor = member.getColor().blockOptional();
+        if (nullableMemberColor.isPresent() && nullableMemberColor.get().getRGB() != 0) {
+            memberColor = nullableMemberColor.get().getRGB();
         }
         var memberComponent = ChatComponents.makeUser(member.getDisplayName(), member.getMention() + ": ", memberColor, Component.empty());
-        Component messageHeaderComponent;
+        Component replyComponent = null;
 
         if (message.getType() == Message.Type.REPLY && message.getReferencedMessage().isPresent()) {
-            var referencedMessage = message.getReferencedMessage().get();
+            var referencedMessage = message.getReferencedMessage();
             Component referenceMemberComponent;
-            var referenceMember = referencedMessage.getAuthorAsMember().block();
-            if (referenceMember != null) {
-                var referenceMemberColor = ChatFormatting.WHITE.getColor();
-                var nullableReferenceMemberColor = member.getColor().block();
-                if (nullableReferenceMemberColor != null) {
-                    referenceMemberColor = nullableReferenceMemberColor.getRGB();
+            var referenceMember = referencedMessage.get().getAuthorAsMember().blockOptional();
+            if (referenceMember.isPresent()) {
+                var referenceMemberColor = NamedTextColor.WHITE.value();
+                var nullableReferenceMemberColor = referenceMember.get().getColor().blockOptional();
+                if (nullableReferenceMemberColor.isPresent() && nullableReferenceMemberColor.get().getRGB() != 0) {
+                    referenceMemberColor = nullableReferenceMemberColor.get().getRGB();
                 }
-                referenceMemberComponent = ChatComponents.makeUser(referenceMember.getDisplayName(), referenceMember.getMention() + ": ", referenceMemberColor, Component.empty());
-            } else if (referencedMessage.getAuthor().isPresent()) {
-                var referenceAuthor = referencedMessage.getAuthor().get();
-                referenceMemberComponent = ChatComponents.makeUser(referenceAuthor.getUsername(), referenceAuthor.getMention() + ": ", ChatFormatting.WHITE.getColor(), Component.empty());
+                referenceMemberComponent = ChatComponents.makeUser(referenceMember.get().getDisplayName(), referenceMember.get().getMention() + ": ", referenceMemberColor, Component.empty());
             } else {
-                var referenceData = referencedMessage.getData();
-                var referenceAuthor = referenceData.author();
-                referenceMemberComponent = ChatComponents.makeUser(referenceAuthor.username(), referenceAuthor.username() + ": ", ChatFormatting.WHITE.getColor(), Component.empty());
+                //var referenceData = referencedMessage();
+                var referenceAuthor = referencedMessage.get().getAuthor();
+                if(referenceAuthor.isPresent()) {
+                    var name = referenceAuthor.get().getGlobalName().orElse(referenceAuthor.get().getUsername());
+                    referenceMemberComponent = ChatComponents.makeUser(name, referenceAuthor.get().getUsername() + ": ", NamedTextColor.WHITE.value(), Component.empty());
+                } else {
+                    referenceMemberComponent = ChatComponents.makeUser("Unknown", "<@invalid>" + ": ", NamedTextColor.WHITE.value(), Component.empty());
+                }
             }
 
-            messageHeaderComponent = ChatComponents.makeReplyHeader(memberComponent, referenceMemberComponent, Component.literal(referencedMessage.getContent()));
-        } else {
-            messageHeaderComponent = memberComponent;
+            replyComponent = ChatComponents.makeReplyHeader(referenceMemberComponent, Component.text(referencedMessage.get().getContent()));
         }
 
         var messageContent = message.getContent();
-        var messageComponent = Component.empty();
+        Component messageComponent = Component.empty();
 
-        var splitContent = splitMessage(messageContent);
-        var memberMentions = message.getMemberMentions();
-        var roleMentions = message.getRoleMentions();
-        for (var part : splitContent) {
-            if (part.matches(mentionPattern.pattern())) {
-                var matcher = integerPattern.matcher(part);
-                if(matcher.find()) {
-                    var snowflakeId = Snowflake.of(matcher.group());
-                    if (part.startsWith("<@&")) { // Role mention
-                        var mentionedRole = roleMentions.filter(p -> p.getId().equals(snowflakeId)).blockFirst();
-                        if (mentionedRole != null) {
-                            int color = mentionedRole.getColor().getRGB();
-                            if(color == 0) {
-                                color = 0x99aab5;
-                            }
-                            messageComponent.append(ChatComponents.makeUser(
-                                    mentionedRole.getName(),
-                                    mentionedRole.getMention() + ": ",
-                                    color,
-                                    ChatComponents.mentionIcon
-                            ));
-                        } else {
-                            messageComponent.append(ChatComponents.makeUser(
-                                    "unknown-role",
-                                    String.format("<@&%s>: ", snowflakeId.asString()),
-                                    ChatFormatting.WHITE.getColor(),
-                                    ChatComponents.mentionIcon
-                            ));
-                        }
-                    } else if (part.startsWith("<@") || part.startsWith("<@!")) { // Member mention
-                        var mentionedOpt = memberMentions.stream().filter(p -> p.getId().equals(snowflakeId)).findFirst();
-                        if (mentionedOpt.isPresent()) {
-                            var mentioned = mentionedOpt.get();
-                            messageComponent.append(ChatComponents.makeUser(
-                                    mentioned.getDisplayName(),
-                                    mentioned.getMention() + ": ",
-                                    Colors.MENTION.getValue(),
-                                    ChatComponents.mentionIcon
-                            ));
-                        } else {
-                            messageComponent.append(ChatComponents.makeUser(
-                                    "unknown-user",
-                                    String.format("<@%s>: ", snowflakeId.asString()),
-                                    Colors.MENTION.getValue(),
-                                    ChatComponents.mentionIcon
-                            ));
-                        }
-                    } else if (part.startsWith("<#")) { // Channel mention
-                        var mentionedChannel = message.getClient().getChannelById(snowflakeId).block();
-                        if (mentionedChannel != null
-                                && (mentionedChannel.getType() == Channel.Type.GUILD_TEXT
-                                || mentionedChannel.getType() == Channel.Type.GUILD_VOICE
-                                || mentionedChannel.getType() == Channel.Type.GUILD_NEWS)) {
+        var parser = NodeParser.merge(new MentionNodeParser(message), MarkdownParser.defaultParser);
+        var mdContentVan = parser.parseNode(messageContent).toText();
 
-                            var guildChannel = (GuildChannel) mentionedChannel;
-                            messageComponent.append(ChatComponents.makeUser(
-                                    guildChannel.getName(),
-                                    guildChannel.getMention() + ": ",
-                                    Colors.MENTION.getValue(),
-                                    ChatComponents.channelIcon
-                            ));
-                        } else {
-                            messageComponent.append(ChatComponents.makeUser(
-                                    "unknown",
-                                    String.format("<#%s>: ", snowflakeId.asString()),
-                                    Colors.MENTION.getValue(),
-                                    ChatComponents.channelIcon
-                            ));
-                        }
-                    }
-                } else {
-                    messageComponent.append(Component.literal(part));
-                }
+        var json = net.minecraft.network.chat.Component.Serializer.toJson(mdContentVan, smpCord.server.registryAccess());
+        var mdContent = JSONComponentSerializer.json().deserialize(json);
 
-            } else {
-                messageComponent.append(Component.literal(part));
-            }
-        }
+        messageComponent = messageComponent.append(mdContent);
 
         var attachments = message.getAttachments();
         if (!messageContent.isEmpty()) {
-            messageComponent.append(ChatComponents.WHITESPACE);
+            messageComponent = messageComponent.appendSpace();
         }
         for (var attachment : attachments) {
-            messageComponent.append(ChatComponents.makeAttachment(attachment.getFilename(), attachment.getUrl()));
+            messageComponent = messageComponent.append(ChatComponents.makeAttachment(attachment.getFilename(), attachment.getUrl()));
+            messageComponent = messageComponent.appendSpace();
         }
 
-        var outputComponent = ChatComponents.makeMessage(messageHeaderComponent, messageComponent);
+        var outputComponent = ChatComponents.makeMessage(memberComponent, replyComponent, messageComponent);
 
-        smpCord.sendMessage(outputComponent);
+        if (isEdited) {
+            outputComponent = outputComponent.append(Component.text("(edited)", NamedTextColor.GRAY));
+        }
+
+        smpCord.sendMessage(ChatComponents.toText(outputComponent));
+    }
+
+    public void onChatInputInteraction(ChatInputInteractionEvent event) {
+        switch (event.getCommandName()) {
+            case "link" -> onLinkCommand(event);
+            case "list" -> onListCommand(event);
+        }
+
+    }
+
+    private void onLinkCommand(ChatInputInteractionEvent event) {
+        var code = event.getOption("code").get().getValue().get().asString();
+        if (!smpCord.pendingLinks.containsKey(code)) {
+            event.reply("Unknown code! Run `/link` in the server to get a code.").subscribe();
+            return;
+        }
+
+        var uuid = smpCord.pendingLinks.get(code);
+
+        var member = event.getInteraction().getMember().get();
+        var userId = member.getId().asString();
+
+        smpCord.links().players.put(uuid, userId);
+        try {
+            smpCord.links().save();
+        } catch (IOException e) {
+            SMPCord.LOGGER.error("Error saving links.json", e);
+        }
+
+        member.addRole(Snowflake.of(Config.roleId), "Automatic link").subscribe();
+
+        event.reply("You have linked your Discord account!").subscribe();
+    }
+
+    private void onListCommand(ChatInputInteractionEvent event) {
+        var list = smpCord.server.getPlayerNames();
+        String players;
+        if (list.length == 0) {
+            players = "*There are no players online*";
+        } else {
+            players = "**Online players**: " + String.join(", ", list);
+        }
+        event.reply(players).withEphemeral(true).subscribe();
     }
 }

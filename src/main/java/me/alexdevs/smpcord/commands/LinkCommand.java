@@ -38,12 +38,12 @@ public class LinkCommand {
                     source.sendSuccess(() -> Component
                             .literal("Link your Discord account by running the following command on the Discord server: ")
                             .withStyle(ChatFormatting.GOLD)
-                            .append(Component.literal("/link " + finalCode)
+                            .append(Component.literal("/link code:" + finalCode)
                                     .setStyle(Style.EMPTY
                                             .withColor(ChatFormatting.BLUE)
                                             .withUnderlined(true)
                                             .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Click to copy command")))
-                                            .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "/link " + finalCode))
+                                            .withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "/link code:" + finalCode))
                                     )
                             ), false);
 

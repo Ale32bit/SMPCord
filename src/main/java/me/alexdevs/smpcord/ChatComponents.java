@@ -1,50 +1,31 @@
 package me.alexdevs.smpcord;
 
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.*;
-
-import javax.annotation.Nullable;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
+import org.jetbrains.annotations.Nullable;
 
 public class ChatComponents {
-    public static final Component discordMessagePrefix = Component
-            .literal("D")
-            .withStyle(Style.EMPTY
-                    .withColor(0x5865F2) // Discord Blurple color
-                    .withHoverEvent(new HoverEvent(
-                            HoverEvent.Action.SHOW_TEXT,
-                            Component.literal("Message from the Discord server")
-                    ))
-                    .withClickEvent(new ClickEvent(
-                            ClickEvent.Action.OPEN_URL,
-                            Config.inviteLink
-                    ))
-            );
+    public static Component discordMessagePrefix = MiniMessage.miniMessage().deserialize(Config.prefix);
 
     public static final Component mentionIcon = Component
-            .literal("@")
-            .withStyle(Style.EMPTY
-                    .withColor(0x5865F2));
+            .text("@")
+            .color(TextColor.color(Colors.BLURPLE));
 
     public static final Component channelIcon = Component
-            .literal("#")
-            .withStyle(Style.EMPTY
-                    .withColor(0x5865F2));
-
-    public static final Component WHITESPACE = Component.literal(" ");
+            .text("#")
+            .color(TextColor.color(Colors.BLURPLE));
 
     public static Component makeUser(String name, String suggest, int color, @Nullable Component prefix) {
-        var comp =  Component.literal(name)
-                .withStyle(Style.EMPTY
-                        .withColor(color)
-                        .withHoverEvent(new HoverEvent(
-                                HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("Click to mention")
-                        ))
-                        .withClickEvent(new ClickEvent(
-                                ClickEvent.Action.SUGGEST_COMMAND,
-                                suggest
-                        ))
-                );
+        var comp = Component.text(name)
+                .color(TextColor.color(color))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to mention")))
+                .clickEvent(ClickEvent.suggestCommand(suggest));
 
         if (prefix != null)
             return Component.empty()
@@ -54,52 +35,34 @@ public class ChatComponents {
         return comp;
     }
 
-    public static Component makeMessageHeader(Component content) {
-        return Component.empty()
-                .append(Component.literal("<"))
-                .append(content)
-                .append(">");
+    public static Component makeReplyHeader(Component referenceUser, Component referenceMessage) {
+        return MiniMessage.miniMessage().deserialize(Config.reply,
+                Placeholder.component("reference_username", referenceUser),
+                Placeholder.component("reference_message", referenceMessage)
+        );
     }
 
-    public static Component makeReplyHeader(Component user, Component referenceUser, Component referenceMessage) {
-        return Component.empty()
-                .append(user)
-                .append(Component
-                        .literal(" replied to ")
-                        .withStyle(Style.EMPTY
-                                .withColor(ChatFormatting.GRAY)
-                                .withHoverEvent(new HoverEvent(
-                                        HoverEvent.Action.SHOW_TEXT,
-                                        Component
-                                                .literal("Message: ")
-                                                .append(referenceMessage)
-                                )))
-                )
-                .append(referenceUser);
-    }
-
-    public static Component makeMessage(Component headerContent, Component message) {
-        return Component.empty()
-                .append(discordMessagePrefix)
-                .append(WHITESPACE)
-                .append(makeMessageHeader(headerContent))
-                .append(WHITESPACE)
-                .append(message);
+    public static Component makeMessage(Component username, @Nullable Component reply, Component message) {
+        if (reply == null)
+            reply = Component.empty();
+        return MiniMessage.miniMessage().deserialize(Config.messageFormat,
+                Placeholder.component("prefix", discordMessagePrefix),
+                Placeholder.component("username", username),
+                Placeholder.component("reply", reply),
+                Placeholder.component("message", message)
+        );
+        //return Component.empty();
     }
 
     public static Component makeAttachment(String fileName, String url) {
         return Component
-                .literal(String.format("[%s]", fileName))
-                .withStyle(Style.EMPTY
-                        .withColor(ChatFormatting.BLUE)
-                        .withHoverEvent(new HoverEvent(
-                                HoverEvent.Action.SHOW_TEXT,
-                                Component.literal("Click to open attachment")
-                        ))
-                        .withClickEvent(new ClickEvent(
-                                ClickEvent.Action.OPEN_URL,
-                                url
-                        ))
-                );
+                .text(String.format("[%s]", fileName))
+                .color(TextColor.color(NamedTextColor.BLUE))
+                .hoverEvent(HoverEvent.showText(Component.text("Click to open attachment")))
+                .clickEvent(ClickEvent.openUrl(url));
+    }
+
+    public static net.minecraft.network.chat.Component toText(Component component) {
+        return net.minecraft.network.chat.Component.Serializer.fromJson(JSONComponentSerializer.json().serialize(component), SMPCord.instance().server.registryAccess());
     }
 }

@@ -6,17 +6,21 @@ import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.interaction.ChatInputInteractionEvent;
 import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.event.domain.message.MessageUpdateEvent;
+import discord4j.core.object.command.ApplicationCommandOption;
 import discord4j.core.object.entity.Webhook;
 import discord4j.core.object.entity.channel.TextChannel;
 import discord4j.core.object.presence.ClientPresence;
-import discord4j.core.spec.InteractionApplicationCommandCallbackReplyMono;
+import discord4j.discordjson.json.ApplicationCommandOptionData;
+import discord4j.discordjson.json.ApplicationCommandRequest;
 import discord4j.gateway.intent.Intent;
 import discord4j.gateway.intent.IntentSet;
+import discord4j.rest.interaction.GuildCommandRegistrar;
 import me.alexdevs.smpcord.Config;
 import me.alexdevs.smpcord.SMPCord;
 import reactor.core.publisher.Mono;
 
-import java.io.IOException;
+import java.util.List;
 
 public class DiscordBot {
     private final SMPCord smpCord;
@@ -71,9 +75,32 @@ public class DiscordBot {
                 if (this.webhook == null) {
                     this.webhook = channel.createWebhook(Config.webhookName).block();
                 }
+
+                var guild = channel.getGuild().block();
+
+                var linkCommand = ApplicationCommandRequest.builder()
+                        .name("link")
+                        .description("Link your Minecraft profile with Discord.")
+                        .addOption(ApplicationCommandOptionData.builder()
+                                .name("code")
+                                .description("Linking code")
+                                .type(ApplicationCommandOption.Type.STRING.getValue())
+                                .required(true)
+                                .build())
+                        .build();
+
+                var listCommand = ApplicationCommandRequest.builder()
+                        .name("list")
+                        .description("Get online players.")
+                        .build();
+
+                GuildCommandRegistrar.create(client.getRestClient(), List.of(linkCommand, listCommand))
+                        .registerCommands(guild.getId())
+                        .doOnError(e -> SMPCord.LOGGER.error("Error registering guild commands", e))
+                        .onErrorResume(e -> Mono.empty())
+                        .blockLast();
             });
 
-            // Listen for MessageCreateEvent
             client.on(MessageCreateEvent.class).subscribe(event -> {
                 try {
                     events.onMessageCreate(event);
@@ -81,6 +108,23 @@ public class DiscordBot {
                     e.printStackTrace();
                 }
             });
+
+            client.on(MessageUpdateEvent.class).subscribe(event -> {
+                try {
+                    events.onMessageEdit(event);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
+            client.on(ChatInputInteractionEvent.class).subscribe(event -> {
+                try {
+                    events.onChatInputInteraction(event);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+
             return Mono.empty();
         }).block();
         clientMono.subscribe();
@@ -88,28 +132,5 @@ public class DiscordBot {
 
     public void setPresence(ClientPresence presence) {
         client.updatePresence(presence).subscribe();
-    }
-
-    private InteractionApplicationCommandCallbackReplyMono linkPlayer(ChatInputInteractionEvent event) {
-        var code = event.getOption("code").get().getValue().get().asString();
-        if (!smpCord.pendingLinks.containsKey(code)) {
-            return event.reply("Unknown code! Run `/link` in the server to get a code.");
-        }
-
-        var uuid = smpCord.pendingLinks.get(code);
-
-        var member = event.getInteraction().getMember().get();
-        var userId = member.getId().asString();
-
-        smpCord.links().players.put(uuid, userId);
-        try {
-            smpCord.links().save();
-        } catch (IOException e) {
-            SMPCord.LOGGER.error("Error saving links.json", e);
-        }
-
-        member.addRole(Snowflake.of(Config.roleId), "Automatic link").subscribe();
-
-        return event.reply("You have linked your Discord account!");
     }
 }
