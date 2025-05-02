@@ -181,7 +181,7 @@ public class DiscordEvents {
     private void onLinkCommand(ChatInputInteractionEvent event) {
         var code = event.getOption("code").get().getValue().get().asString();
         if (!smpCord.pendingLinks.containsKey(code)) {
-            event.reply("Unknown code! Run `/link` in the server to get a code.").subscribe();
+            event.reply("Unknown code! Run `/link` in the server to get a code.").withEphemeral(true).subscribe();
             return;
         }
 
@@ -191,6 +191,7 @@ public class DiscordEvents {
         var userId = member.getId().asString();
 
         smpCord.links().players.put(uuid, userId);
+        smpCord.pendingLinks.remove(code);
         try {
             smpCord.links().save();
         } catch (IOException e) {
@@ -199,7 +200,7 @@ public class DiscordEvents {
 
         member.addRole(Snowflake.of(Config.roleId), "Automatic link").subscribe();
 
-        event.reply("You have linked your Discord account!").subscribe();
+        event.reply("You have linked your Discord account!").withEphemeral(true).subscribe();
     }
 
     private void onListCommand(ChatInputInteractionEvent event) {
