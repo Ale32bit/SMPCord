@@ -12,13 +12,13 @@ public class SystemChatEvent extends Event implements ICancellableEvent {
     private final String message;
     private final ChatType.Bound boundChatType;
 
-    public SystemChatEvent(ServerPlayer player, String message, ChatType.Bound boundChatType) {
+    public SystemChatEvent(@Nullable ServerPlayer player, String message, ChatType.Bound boundChatType) {
         this.player = player;
         this.message = message;
         this.boundChatType = boundChatType;
     }
 
-    public ServerPlayer getPlayer() {
+    public @Nullable ServerPlayer getPlayer() {
         return player;
     }
 

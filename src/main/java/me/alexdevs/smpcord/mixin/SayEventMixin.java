@@ -3,7 +3,6 @@ package me.alexdevs.smpcord.mixin;
 import me.alexdevs.smpcord.event.SystemChatEvent;
 import net.minecraft.network.chat.ChatType;
 import net.minecraft.network.chat.PlayerChatMessage;
-import net.minecraft.server.commands.SayCommand;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.neoforged.neoforge.common.NeoForge;
