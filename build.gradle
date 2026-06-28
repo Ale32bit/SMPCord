@@ -123,9 +123,15 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 dependencies {
     implementation("eu.pb4:placeholderapi:2.4.2+1.21.1-nf")
 
-    compileOnly("net.kyori:adventure-platform-mod-shared:6.0.0")
-    shade ("net.kyori:adventure-platform-mod-shared:6.0.0")
-    additionalRuntimeClasspath("net.kyori:adventure-platform-mod-shared:6.0.0")
+    // Plain Adventure (no platform-mod — codebase uses zero platform APIs)
+    compileOnly("net.kyori:adventure-text-minimessage:4.17.0")
+    shade("net.kyori:adventure-text-minimessage:4.17.0")
+    additionalRuntimeClasspath("net.kyori:adventure-text-minimessage:4.17.0")
+
+    compileOnly("net.kyori:adventure-text-serializer-gson:4.17.0")
+    shade("net.kyori:adventure-text-serializer-gson:4.17.0")
+    additionalRuntimeClasspath("net.kyori:adventure-text-serializer-gson:4.17.0")
+
     shade ('com.discord4j:discord4j-core:3.2.7')
     additionalRuntimeClasspath('com.discord4j:discord4j-core:3.2.7')
 }
