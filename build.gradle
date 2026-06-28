@@ -125,6 +125,7 @@ dependencies {
 
     compileOnly("net.kyori:adventure-platform-mod-shared:6.0.0")
     shade ("net.kyori:adventure-platform-mod-shared:6.0.0")
+    additionalRuntimeClasspath("net.kyori:adventure-platform-mod-shared:6.0.0")
     shade ('com.discord4j:discord4j-core:3.2.7')
     additionalRuntimeClasspath('com.discord4j:discord4j-core:3.2.7')
 }

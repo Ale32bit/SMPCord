@@ -9,6 +9,7 @@ import discord4j.rest.util.Color;
 import me.alexdevs.smpcord.commands.DiscordCommand;
 import me.alexdevs.smpcord.commands.LinkCommand;
 import me.alexdevs.smpcord.discord.DiscordBot;
+import me.alexdevs.smpcord.event.SystemChatEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -41,9 +42,11 @@ public class SMPCord {
     public static final String MODID = "smpcord";
     public static final Logger LOGGER = LogUtils.getLogger();
     private static SMPCord instance;
+
     public static SMPCord instance() {
         return instance;
     }
+
     public MinecraftServer server;
     private DiscordBot discordBot;
     private Links links;
@@ -67,6 +70,23 @@ public class SMPCord {
     public void sendMessage(Component component) {
         var players = server.getPlayerList();
         players.broadcastSystemMessage(component, false);
+    }
+
+    private void sendDiscordMessage(String rawMessage, String username, String avatarUrl) {
+        discordBot.getWebhook().execute()
+                .withAvatarUrl(avatarUrl)
+                .withUsername(username)
+                .withContent(rawMessage)
+                .withAllowedMentions(discord4j.rest.util.AllowedMentions.suppressEveryone())
+                .subscribe();
+    }
+
+    private void sendSystemDiscordMessage(String rawMessage, String avatarUrl) {
+        discordBot.getWebhook().execute()
+                .withAvatarUrl(avatarUrl)
+                .withContent(rawMessage)
+                .withAllowedMentions(discord4j.rest.util.AllowedMentions.suppressEveryone())
+                .subscribe();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -134,12 +154,19 @@ public class SMPCord {
         var rawMessage = event.getRawText();
         var avatarUrl = Utils.getAvatarUrl(player);
 
-        discordBot.getWebhook().execute()
-                .withAvatarUrl(avatarUrl)
-                .withUsername(username)
-                .withContent(rawMessage)
-                .withAllowedMentions(discord4j.rest.util.AllowedMentions.suppressEveryone())
-                .subscribe();
+        sendDiscordMessage(rawMessage, username, avatarUrl);
+    }
+
+    @SubscribeEvent
+    public void onServerSystemChat(SystemChatEvent event) {
+        var message = event.getMessage();
+        var player = event.getPlayer();
+
+        if (player != null) {
+            sendDiscordMessage(message, player.getDisplayName().getString(), Utils.getAvatarThumbnailUrl(player));
+        } else {
+            sendSystemDiscordMessage(message, Config.serverAvatarUrl);
+        }
     }
 
     @SubscribeEvent
@@ -172,7 +199,7 @@ public class SMPCord {
                 .subscribe();
 
         var server = event.getEntity().getServer();
-        if(server != null) {
+        if (server != null) {
             updatePlayerCount(event.getEntity().getServer().getPlayerCount());
         }
     }
@@ -189,7 +216,7 @@ public class SMPCord {
                 .subscribe();
 
         var server = event.getEntity().getServer();
-        if(server != null) {
+        if (server != null) {
             updatePlayerCount(event.getEntity().getServer().getPlayerCount() - 1);
         }
     }
